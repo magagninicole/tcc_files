@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["trap_handler","Handles the trap and calls `TrapFrame.handle` architecture specifc implemetation"]],"struct":[["TrapFrame","`TrapFrame` from a trap"]]});

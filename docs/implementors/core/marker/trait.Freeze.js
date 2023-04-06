@@ -1,0 +1,4 @@
+(function() {var implementors = {};
+implementors["qemu_exit"] = [{"text":"impl Freeze for RISCV64","synthetic":true,"types":[]}];
+implementors["strail"] = [{"text":"impl Freeze for Uart","synthetic":true,"types":[]},{"text":"impl Freeze for CSRegister","synthetic":true,"types":[]},{"text":"impl Freeze for Interrupt","synthetic":true,"types":[]},{"text":"impl Freeze for Exception","synthetic":true,"types":[]},{"text":"impl Freeze for PageEntryBits","synthetic":true,"types":[]},{"text":"impl Freeze for Entry","synthetic":true,"types":[]},{"text":"impl Freeze for Table","synthetic":true,"types":[]},{"text":"impl Freeze for TrapFrame","synthetic":true,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

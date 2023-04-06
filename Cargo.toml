@@ -1,0 +1,26 @@
+[package]
+name = "strail"
+version = "0.1.0"
+authors = ["Ben Mezger <me@benmezger.nl>"]
+edition = "2018"
+
+[profile.dev]
+opt-level = 0
+lto = false
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[dependencies]
+cfg-if = "1.0"
+
+[dependencies.lazy_static]
+version = "1.4.0"
+features = ["spin_no_std"]
+
+[features]
+test-wrap-panic = []
+close-on-panic = []
+default = ["test-wrap-panic", "close-on-panic"]

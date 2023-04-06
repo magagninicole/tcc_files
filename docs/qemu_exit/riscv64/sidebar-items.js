@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["RISCV64","RISCV64 configuration"]]});

@@ -1,0 +1,1 @@
+{"rustc":8340320422302880870,"features":"[]","target":12087904288529291851,"profile":8400667268029325022,"path":6185356617464391670,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"riscv64imac-unknown-none-elf/release/.fingerprint/core-7f2ee35528ad69b7/dep-lib-core"}}],"rustflags":["-C","link-arg=-Tlds/riscv64-virt.ld"],"metadata":12327122516758077269,"config":0}

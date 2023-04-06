@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["mmio_read","Reads a value from memory memory-mapped I/O at `address` in `offset`"],["mmio_write","Writes `value` to memory memory-mapped I/O at `address` in `offset`"]]});

@@ -1,0 +1,4 @@
+(function() {var implementors = {};
+implementors["qemu_exit"] = [{"text":"impl Sync for RISCV64","synthetic":true,"types":[]}];
+implementors["strail"] = [{"text":"impl Sync for Uart","synthetic":true,"types":[]},{"text":"impl Sync for CSRegister","synthetic":true,"types":[]},{"text":"impl Sync for Interrupt","synthetic":true,"types":[]},{"text":"impl Sync for Exception","synthetic":true,"types":[]},{"text":"impl Sync for PageEntryBits","synthetic":true,"types":[]},{"text":"impl Sync for Entry","synthetic":true,"types":[]},{"text":"impl Sync for Table","synthetic":true,"types":[]},{"text":"impl Sync for TrapFrame","synthetic":true,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

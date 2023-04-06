@@ -1,0 +1,232 @@
+#+TITLE: Diagrams
+#+SUBTITLE: Kernel diagrams
+#+AUTHOR: Ben Mezger
+#+DATE: <2021-03-03 Wed>
+#+STARTUP: inlineimages
+
+
+* Kernel
+#+BEGIN_SRC plantuml :file static/components.png
+@startuml
+package "kernel" {
+        [main] ..> [arch] :uses
+}
+
+package "arch" {
+        [kmem] ..> [riscv] :depends
+        [mem] ..> [riscv] :depends
+}
+
+package "tests" {
+        [test_x] ..> [kernel] :uses
+}
+
+@enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:static/components.png]]
+
+
+** Sequence diagram of arch and kernel
+
+#+BEGIN_SRC plantuml :file static/kernel-arch-sequence.png
+@startuml
+autoactivate on
+
+group Main
+        group Initialize memory
+                main -> "arch::mem::init": Initialize memory paging
+                "arch::mem::init" -> "isa::page::init": Calls ISA page init
+                "arch::mem::init" <-- "isa::page::init"
+                main <-- "arch::mem::init"
+        end
+
+        group Initialize kernel memory
+                main -> "arch::kmem::init": Initialize kernel memory
+                "arch::kmem::init" -> "arch::mem::zalloc": Zero allocate kernel memory
+                return Returns chunk of zeroed memory
+                
+                "arch::kmem::init" -> "arch::kmem::set_free": Set head to free
+                return
+                
+                "arch::kmem::init" -> "arch::kmem::set_size": Sets head size
+                return
+                
+                "arch::kmem::init" -> "arch::mem::zalloc": Allocate one page table for the kernel
+                return Returns a chunk of zeroed memory
+                "arch::kmem::init" -> "arch::kmem::init_identity_map": Map descriptors to an identity map
+
+                "arch::kmem::init_identity_map" -> "isa::page::ident_map_range"
+                return Range mapped
+                
+                "arch::kmem::init_identity_map" -> "isa::page::ident_map_range"
+                return Range mapped
+                "arch::kmem::init_identity_map" -> "isa::page::ident_map_range"
+                return Range mapped
+                
+                "arch::kmem::init" <-- "arch::kmem::init_identity_map"
+                main <-- "arch::kmem::init"
+        end
+        
+        main -> "kinfo": Show kernel information
+        return
+        main -> "arch::mem::print_page_allocation": Show page allocation infomation
+        return
+end
+@enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:static/kernel-arch-sequence.png]]
+
+
+* Uart
+** Class diagram
+#+BEGIN_SRC plantuml :file static/uart-class.png
+@startuml
+class Uart {
+        base_address :usize
+        +Uart new(base_address :usize)
+        +init()
+        +put(self :&mut, c :u8)
+}
+
+class Write {
+        +Result<(), Error> write_str(self :&mut, s :&str) 
+}
+
+class Uart implements Write {}
+@enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:static/uart-class.png]]
+
+** Uart Sequence diagram
+#+BEGIN_SRC plantuml :file static/uart-sequence.png
+@startuml
+autoactivate on
+
+main -> uart: Create a new Uart object
+main <-- uart: Returns created Uart object
+main -> uart: Initialize Uart
+uart -> mmio: Write to mmio
+mmio --> uart: 
+uart --> main: 
+@enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:static/uart-sequence.png]]
+
+
+* Trap
+
+** RISC-V
+#+BEGIN_SRC plantuml :file static/riscv-trap.png
+@startuml
+
+actor actor as program
+
+activate program
+program -> _trap_entry
+
+activate _trap_entry
+_trap_entry -> _trap_entry : Save context
+_trap_entry -> _trap_entry : Move registers to handler args
+_trap_entry -> trap_handler : call rust trap_handler
+
+activate trap_handler
+                
+group match exception code
+        alt is asynchronous
+                alt is supported
+                        trap_handler -> trap_handler : increment pc + 4
+                else is not supported
+                        break panic
+                end
+        end
+        else is synchronous
+                alt is supported
+                        trap_handler -> trap_handler : increment pc + 4
+                else is not supported
+                        break panic
+                end
+        end
+end
+deactivate trap_handler
+                        
+trap_handler --> _trap_entry
+                
+activate _trap_entry
+_trap_entry -> _trap_entry: set return value to a0
+_trap_entry -> _trap_entry: restore context
+deactivate _trap_entry
+                
+_trap_entry --> program
+                        
+deactivate program
+@enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:static/riscv-trap.png]]
+
+* Process
+** Process model
+#+BEGIN_SRC plantuml :file static/process-model.png
+@startuml
+
+package src {
+    package process {
+        class Process {
+            - state : State
+            - pid : u8
+            - pc : usize
+
+            + new() : Process
+            + is_running() : bool
+            + is_waiting() : bool
+            + is_ready() : bool
+            + is_dead() : bool
+        }
+    }
+
+    package sched {
+        class Scheduler {
+            - processes : [Process; 10]
+            + init()
+            + schedule(p: Process) : Option<Thread>
+        }
+    }
+
+    package arch {
+        package riscv {
+            package trap {
+                class TrapFrame {
+                    + regs : [usize; 64]
+                    + hartid : usize
+                    - fregs : [usize; 64]
+                    - satp : usize,
+
+                    + is_async() : bool
+                    + stack() : usize
+                }
+            }
+
+            package thread {
+                class Thread {
+                    + id : u8
+                    + hartid : usize
+                    + new() : Thread
+                }
+            }
+        }
+    }
+}
+@enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:static/process-model.png]]

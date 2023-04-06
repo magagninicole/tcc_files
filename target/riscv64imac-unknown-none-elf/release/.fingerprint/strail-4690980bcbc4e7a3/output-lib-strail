@@ -1,0 +1,9 @@
+error: instruction requires the following: 'M' (Integer Multiplication and Division)
+        mul             t0, t0, a0
+        ^
+error: instruction requires the following: 'M' (Integer Multiplication and Division)
+        mul             t0, t0, a0
+        ^
+error: instruction requires the following: 'M' (Integer Multiplication and Division)
+        mul             t0, t0, a0
+        ^

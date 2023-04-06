@@ -1,0 +1,9 @@
+/home/nicole/SO/strail-rs-kernel-refactor/target/riscv64imac-unknown-none-elf/debug/deps/rustc_demangle-df848299b8ac8604.rmeta: /home/nicole/.rustup/toolchains/nightly-2020-12-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/vendor/rustc-demangle/src/lib.rs /home/nicole/.rustup/toolchains/nightly-2020-12-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/vendor/rustc-demangle/src/legacy.rs /home/nicole/.rustup/toolchains/nightly-2020-12-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/vendor/rustc-demangle/src/v0.rs
+
+/home/nicole/SO/strail-rs-kernel-refactor/target/riscv64imac-unknown-none-elf/debug/deps/librustc_demangle-df848299b8ac8604.rlib: /home/nicole/.rustup/toolchains/nightly-2020-12-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/vendor/rustc-demangle/src/lib.rs /home/nicole/.rustup/toolchains/nightly-2020-12-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/vendor/rustc-demangle/src/legacy.rs /home/nicole/.rustup/toolchains/nightly-2020-12-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/vendor/rustc-demangle/src/v0.rs
+
+/home/nicole/SO/strail-rs-kernel-refactor/target/riscv64imac-unknown-none-elf/debug/deps/rustc_demangle-df848299b8ac8604.d: /home/nicole/.rustup/toolchains/nightly-2020-12-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/vendor/rustc-demangle/src/lib.rs /home/nicole/.rustup/toolchains/nightly-2020-12-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/vendor/rustc-demangle/src/legacy.rs /home/nicole/.rustup/toolchains/nightly-2020-12-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/vendor/rustc-demangle/src/v0.rs
+
+/home/nicole/.rustup/toolchains/nightly-2020-12-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/vendor/rustc-demangle/src/lib.rs:
+/home/nicole/.rustup/toolchains/nightly-2020-12-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/vendor/rustc-demangle/src/legacy.rs:
+/home/nicole/.rustup/toolchains/nightly-2020-12-12-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/vendor/rustc-demangle/src/v0.rs:
