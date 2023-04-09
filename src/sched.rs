@@ -1,6 +1,6 @@
 use crate::consts;
-use crate::process::{State, PROCESS_LIST, TMR_VALUES_LIST};
-use alloc::vec;
+use crate::process::{State, PROCESS_LIST};
+
 // TODO: move this to RISC-V
 pub const MMIO_MTIMECMP: *mut u64 = 0x0200_4000usize as *mut u64;
 pub const MMIO_MTIME: *const u64 = 0x0200_BFF8 as *const u64;
@@ -26,29 +26,23 @@ pub fn schedule() -> usize {
                 if let Some(prc) = pl.front_mut() {
                     match prc.state {
                         State::Running => {
-                            if prc.is_tmr{ 
-                               if let Some(mut tmr) = TMR_VALUES_LIST.take() {
-                                if tmr.len() >= 3 {
-                                crate::println!("aaaaaaaa ");
-                                let result1 = tmr.pop_front().unwrap();
-                                let result2 = tmr.pop_front().unwrap();
-                                let result3 = tmr.pop_front().unwrap();
-                                TMR_VALUES_LIST.replace(tmr);
-                                validate(result1, result2, result3);
-                                }
-                                break 'procfindloop;
-                            } 
-                            }else {
-                                frame_addr = prc.get_frame_addr();
-                                break 'procfindloop;
-                            }
+                            frame_addr = prc.get_frame_addr();
+                            crate::println!("Frame Address: {}", frame_addr);
+                            break 'procfindloop;
                         }
-                
-                    _ => {}
+                        //State::Sleeping => {
+                        //    // Awaken sleeping processes whose sleep until is in
+                        //    // the past.
+                        //    if prc.sleep_until <= get_mtime() {
+                        //        prc.state = ProcessState::Running;
+                        //        frame_addr = prc.frame as usize;
+                        //        break 'procfindloop;
+                        //    }
+                        //}
+                        _ => {}
                     }
                 }
             }
-   
             PROCESS_LIST.replace(pl);
         } else {
             crate::println!("could not take process list");
@@ -56,22 +50,3 @@ pub fn schedule() -> usize {
     }
     frame_addr
 }
-
-pub fn validate(result1: usize, result2: usize, result3: usize) -> usize {
-    let mut results = vec![];
-    results.push(result1);
-    results.push(result2);
-    results.push(result3);
-
-    let mut output = 0;
-
-    for i in 0..(results.len() - 1) {
-        if results[i] == results[i + 1] {
-            output = results[i];
-            break;
-        }
-    }
-    crate::println!("{}", output);
-    output
-}
-//int global i pra cada vez que o processo roda i++, random valor

@@ -1,5 +1,6 @@
 use crate::{cpu, process};
 use core::convert::{TryFrom, TryInto};
+use alloc::collections::vec_deque::VecDeque;
 use crate::process::{State, TMR_VALUES_LIST};
 
 #[repr(usize)]
@@ -8,7 +9,9 @@ pub enum Syscall {
     DumpRegisters,
     Sleep,
     Exit,
-    TmrAdd
+    TmrAdd,
+    Verify,
+    PrintTotal
 }
 
 impl TryFrom<usize> for Syscall {
@@ -21,6 +24,8 @@ impl TryFrom<usize> for Syscall {
             x if x == Syscall::Sleep as usize => Ok(Syscall::Sleep),
             x if x == Syscall::Exit as usize => Ok(Syscall::Exit),
             x if x == Syscall::TmrAdd as usize => Ok(Syscall::TmrAdd),
+            x if x == Syscall::Verify as usize => Ok(Syscall::Verify),
+            x if x == Syscall::PrintTotal as usize => Ok(Syscall::PrintTotal),
             _ => Err(()),
         }
     }
@@ -38,7 +43,7 @@ extern "C" {
     ) -> usize;
 }
 
-pub unsafe fn make_syscall(pc: usize, frame_ptr: *mut crate::arch::isa::trap::TrapFrame,total: usize) {
+pub unsafe fn make_syscall(pc: usize, frame_ptr: *mut crate::arch::isa::trap::TrapFrame) {
     if frame_ptr.is_null() {
         return;
     }
@@ -65,14 +70,43 @@ pub unsafe fn make_syscall(pc: usize, frame_ptr: *mut crate::arch::isa::trap::Tr
             crate::println!("Exiting. Bye.");
             crate::abort()
         }
+        Ok(Syscall::PrintTotal) => {
+            crate::println!("Total: {}", process::total);
+        }
         Ok(Syscall::TmrAdd) => {
-            if let Some(mut tmr) = unsafe { TMR_VALUES_LIST.take() } {
-                crate::println!("{}", total);
-                tmr.push_back(total);
+            let mut i = 0;
+            if let Some(mut tmr) = TMR_VALUES_LIST.take(){
+                crate::println!("Total value: {}", process::total);
+                tmr.push_back(process::total);
                 TMR_VALUES_LIST.replace(tmr);
-                } else {
-                crate::println!("not gonna happen");
-                }    
+                if let Some(new_tmr) = TMR_VALUES_LIST.as_ref() {
+                    crate::println!("TMR_VALUES_LIST size: {}", new_tmr.len());
+                    if(new_tmr.len() >= 3){
+                        syscall_verify();
+                    }
+                }
+            }
+        }
+        Ok(Syscall::Verify) => {
+            if let Some(tmr) = TMR_VALUES_LIST.as_ref() {
+                let mut max_count = 0;
+                let mut most_common_value = 0;
+            
+                for i in 0..tmr.len() {
+                    let mut count = 0;
+                    for j in i+1..tmr.len() {
+                        if tmr[i] == tmr[j] {
+                            count += 1;
+                        }
+                    }
+                    if count > max_count {
+                        max_count = count;
+                        most_common_value = tmr[i];
+                    }
+                }
+            
+                crate::println!("Correct output: {}", most_common_value);
+            }
         }
         Err(_) => panic!("Unknown syscall {}", syscall_id),
     }
@@ -96,4 +130,11 @@ pub fn syscall_exit() -> usize {
 
 pub fn syscall_push_tmr(total: usize) -> usize {
     unsafe { _make_syscall(Syscall::TmrAdd as usize, total, 0, 0, 0, 0, 0) }
+}
+pub fn syscall_print_total(total: usize) -> usize {
+    unsafe { _make_syscall(Syscall::PrintTotal as usize, total, 0, 0, 0, 0, 0) }
+}
+
+pub fn syscall_verify() -> usize {
+    unsafe { _make_syscall(Syscall::Verify as usize, 0, 0, 0, 0, 0, 0) }
 }

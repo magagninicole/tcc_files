@@ -42,6 +42,9 @@ pub struct Process {
 
 pub static mut PROCESS_LIST: Option<VecDeque<Process>> = None;
 pub static mut TMR_VALUES_LIST: Option<VecDeque<usize>> = None;
+pub static mut total:usize = 0;
+pub static mut count:u32 = 0;
+pub static mut TMR_BOOL:bool = false;
 
 impl fmt::Display for Process {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -153,7 +156,10 @@ pub fn create_process(func: fn(), tmr: bool) -> usize {
     
     let mut processes: Option<VecDeque<Process>> = None;
 
+
         unsafe {
+            TMR_BOOL = true;
+
             processes = Some(VecDeque::with_capacity(3));
         
             let tmr_values_list = ret_proc.tmr();
@@ -181,7 +187,7 @@ pub fn create_process(func: fn(), tmr: bool) -> usize {
                 unsafe {
                     PROCESS_LIST.replace(pl);
                 }
-
+                
             } else {
                 return 0;
             }
@@ -190,7 +196,7 @@ pub fn create_process(func: fn(), tmr: bool) -> usize {
             }
         
         }
-
+        
     }   
     pid
 }
@@ -233,9 +239,9 @@ pub fn init() -> usize {
         PROCESS_LIST = Some(VecDeque::with_capacity(15));
 
         init_tmr_values_list();
-
-        create_process(sum,true);
         
+        create_process(mult, true);
+
         let pl = PROCESS_LIST.take().unwrap();
         let p = pl.front().unwrap().frame;
 
@@ -245,10 +251,30 @@ pub fn init() -> usize {
 }
 
 fn sum() {
-    let x = 1;
+    let x = 2;
+    let y = 2;
+    unsafe {
+         total = x+y;
+         if(TMR_BOOL) {
+           syscall::syscall_push_tmr(total);
+         } else {
+            syscall::syscall_print_total(total); 
+         }
+         }
+}
+
+
+fn mult() {
+    let x = 3;
     let y = 1;
-    let total = x+y;
-    syscall::syscall_push_tmr(total);
+    unsafe {
+         total = x*y;
+         if(TMR_BOOL) {
+           syscall::syscall_push_tmr(total);
+         } else {
+            syscall::syscall_print_total(total); 
+         }
+         }
 }
 
 fn init_process() {
