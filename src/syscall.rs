@@ -11,7 +11,8 @@ pub enum Syscall {
     Exit,
     TmrAdd,
     Verify,
-    PrintTotal
+    PrintTotal,
+    Print
 }
 
 impl TryFrom<usize> for Syscall {
@@ -26,6 +27,7 @@ impl TryFrom<usize> for Syscall {
             x if x == Syscall::TmrAdd as usize => Ok(Syscall::TmrAdd),
             x if x == Syscall::Verify as usize => Ok(Syscall::Verify),
             x if x == Syscall::PrintTotal as usize => Ok(Syscall::PrintTotal),
+            x if x == Syscall::Print as usize => Ok(Syscall::Print),
             _ => Err(()),
         }
     }
@@ -73,6 +75,9 @@ pub unsafe fn make_syscall(pc: usize, frame_ptr: *mut crate::arch::isa::trap::Tr
         Ok(Syscall::PrintTotal) => {
             crate::println!("Total: {}", process::total);
         }
+        Ok(Syscall::Print) => {
+            crate::println!("Tempo: {}", process::time_total);
+        }
         Ok(Syscall::TmrAdd) => {
             let mut i = 0;
             if let Some(mut tmr) = TMR_VALUES_LIST.take(){
@@ -80,7 +85,7 @@ pub unsafe fn make_syscall(pc: usize, frame_ptr: *mut crate::arch::isa::trap::Tr
                 tmr.push_back(process::total);
                 TMR_VALUES_LIST.replace(tmr);
                 if let Some(new_tmr) = TMR_VALUES_LIST.as_ref() {
-                    crate::println!("TMR_VALUES_LIST size: {}", new_tmr.len());
+                    crate::println!("TMR_VALUES_LIST size: {} \n", new_tmr.len());
                     if(new_tmr.len() >= 3){
                         syscall_verify();
                     }
@@ -106,6 +111,7 @@ pub unsafe fn make_syscall(pc: usize, frame_ptr: *mut crate::arch::isa::trap::Tr
                 }
             
                 crate::println!("Correct output: {}", most_common_value);
+                syscall_print();
             }
         }
         Err(_) => panic!("Unknown syscall {}", syscall_id),
@@ -133,6 +139,9 @@ pub fn syscall_push_tmr(total: usize) -> usize {
 }
 pub fn syscall_print_total(total: usize) -> usize {
     unsafe { _make_syscall(Syscall::PrintTotal as usize, total, 0, 0, 0, 0, 0) }
+}
+pub fn syscall_print() -> usize {
+    unsafe { _make_syscall(Syscall::Print as usize, 0, 0, 0, 0, 0, 0) }
 }
 
 pub fn syscall_verify() -> usize {
