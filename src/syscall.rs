@@ -12,7 +12,8 @@ pub enum Syscall {
     TmrAdd,
     Verify,
     PrintTotal,
-    Print
+    Print,
+    Sum
 }
 
 impl TryFrom<usize> for Syscall {
@@ -28,6 +29,7 @@ impl TryFrom<usize> for Syscall {
             x if x == Syscall::Verify as usize => Ok(Syscall::Verify),
             x if x == Syscall::PrintTotal as usize => Ok(Syscall::PrintTotal),
             x if x == Syscall::Print as usize => Ok(Syscall::Print),
+            x if x == Syscall::Sum as usize => Ok(Syscall::Sum),
             _ => Err(()),
         }
     }
@@ -75,11 +77,22 @@ pub unsafe fn make_syscall(pc: usize, frame_ptr: *mut crate::arch::isa::trap::Tr
         Ok(Syscall::PrintTotal) => {
             crate::println!("Total: {}", process::total);
         }
+        Ok(Syscall::Sum) => {
+           let x = 2;
+           let y = 2;
+
+           process::total = x + y;
+
+           if (process::TMR_BOOL){
+            syscall_push_tmr(process::total);
+           } else {
+            syscall_print_total(process::total);
+           }    
+        }
         Ok(Syscall::Print) => {
             crate::println!("Tempo: {}", process::time_total);
         }
         Ok(Syscall::TmrAdd) => {
-            let mut i = 0;
             if let Some(mut tmr) = TMR_VALUES_LIST.take(){
                 crate::println!("Total value: {}", process::total);
                 tmr.push_back(process::total);
@@ -139,6 +152,9 @@ pub fn syscall_push_tmr(total: usize) -> usize {
 }
 pub fn syscall_print_total(total: usize) -> usize {
     unsafe { _make_syscall(Syscall::PrintTotal as usize, total, 0, 0, 0, 0, 0) }
+}
+pub fn syscall_sum() -> usize {
+    unsafe { _make_syscall(Syscall::Sum as usize, 0, 0, 0, 0, 0, 0) }
 }
 pub fn syscall_print() -> usize {
     unsafe { _make_syscall(Syscall::Print as usize, 0, 0, 0, 0, 0, 0) }
