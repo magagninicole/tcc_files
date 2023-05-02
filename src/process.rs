@@ -265,31 +265,9 @@ pub fn init() -> usize {
 }
 
 fn sum() {
-    let x = 2;
-    let y = 2;
-    unsafe {
-         total = x+y;
-         if(TMR_BOOL) {
-           syscall::syscall_push_tmr(total);
-         } else {
-            syscall::syscall_print_total(total); 
-         }
-         }
+    syscall::syscall_sum();
 }
 
-
-fn mult() {
-    let x = 3;
-    let y = 1;
-    unsafe {
-         total = x*y;
-         if(TMR_BOOL) {
-           syscall::syscall_push_tmr(total);
-         } else {
-            syscall::syscall_print_total(total); 
-         }
-         }
-}
 
 fn init_process() {
     syscall::syscall_dump();
