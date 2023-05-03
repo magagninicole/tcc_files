@@ -1,276 +1,167 @@
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub enum State {
-    Ready,
-    Running,
-    Sleeping,
-    Waiting,
-    Dead,
-}
-
-use crate::{arch, consts, syscall};
+use crate::{cpu, process};
+use core::convert::{TryFrom, TryInto};
 use alloc::collections::vec_deque::VecDeque;
-use core::{fmt, ptr::null_mut};
-use riscv::register::mcycle;
+use crate::process::{State, TMR_VALUES_LIST};
 
-static mut NEXT_PID: usize = 1;
+pub static mut sum:usize = 0;
 
-#[derive(Debug, Clone)]
-pub struct ProcessData {
-    cwd_path: [u8; 128],
+#[repr(usize)]
+pub enum Syscall {
+    Nop = 0,
+    DumpRegisters,
+    Sleep,
+    Exit,
+    TmrAdd,
+    Verify,
+    PrintTotal,
+    Print,
+    Sum
 }
 
-impl ProcessData {
-    pub fn zero() -> Self {
-        ProcessData { cwd_path: [0; 128] }
-    }
+impl TryFrom<usize> for Syscall {
+    type Error = ();
 
-}
-
-#[repr(C)]
-#[derive(Debug, Clone)]
-pub struct Process {
-    pub state: State,
-    pub pid: usize,
-    pub is_tmr: bool,
-    stack: *mut u8,
-    frame: *mut arch::isa::trap::TrapFrame,
-    root: *mut arch::isa::page::Table,
-    data: ProcessData,
-    program: *mut u8,
-    sleep_until: usize,
-}
-
-pub static mut PROCESS_LIST: Option<VecDeque<Process>> = None;
-pub static mut TMR_VALUES_LIST: Option<VecDeque<usize>> = None;
-pub static mut time_total:f32 = 0.0;
-pub static mut total:usize = 0;
-pub static mut count:u32 = 0;
-pub static mut TMR_BOOL:bool = false;
-
-impl fmt::Display for Process {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Process of pid {}, frame {:p}", self.pid, self.frame)
-    }
-}
-
-fn do_nothing() {}
-
-impl Process {
-    pub fn get_frame_addr(&self) -> usize {
-        self.frame as usize
-    }
-    pub fn get_pc(&self) -> usize {
-        unsafe { (*self.frame).pc }
-    }
-    pub fn get_table_addr(&self) -> usize {
-        self.root as usize
-    }
-    pub fn get_state(&self) -> &State {
-        &self.state
-    }
-    pub fn get_pid(&self) -> usize {
-       self.pid
-    }
-    
-    pub fn clones(&self) -> Self {
-        let cloned = Process {
-            is_tmr: false,
-            frame: arch::mem::zalloc(1) as *mut arch::isa::trap::TrapFrame,
-            stack: arch::mem::alloc(consts::STACK_PAGES),
-            pid: unsafe { NEXT_PID },
-            root: arch::mem::zalloc(1) as *mut arch::isa::page::Table,
-            state: State::Running,
-            data: ProcessData::zero(),
-            program: null_mut(),
-            sleep_until: 0,
-        };
-    
-        unsafe {
-            NEXT_PID += 1;
-        }
-    
-    cloned
-    }
-
-    pub fn tmr(&self) -> Option<(Self, Self, Self)> {
-        if self.is_tmr {
-            let clone1 = self.clones();
-            let clone2 = self.clones();
-            let clone3 = self.clones();
-            Some((clone1, clone2, clone3))
-        } else {
-            None
+    fn try_from(v: usize) -> Result<Self, Self::Error> {
+        match v {
+            x if x == Syscall::Nop as usize => Ok(Syscall::Nop),
+            x if x == Syscall::DumpRegisters as usize => Ok(Syscall::DumpRegisters),
+            x if x == Syscall::Sleep as usize => Ok(Syscall::Sleep),
+            x if x == Syscall::Exit as usize => Ok(Syscall::Exit),
+            x if x == Syscall::TmrAdd as usize => Ok(Syscall::TmrAdd),
+            x if x == Syscall::Verify as usize => Ok(Syscall::Verify),
+            x if x == Syscall::PrintTotal as usize => Ok(Syscall::PrintTotal),
+            x if x == Syscall::Print as usize => Ok(Syscall::Print),
+            x if x == Syscall::Sum as usize => Ok(Syscall::Sum),
+            _ => Err(()),
         }
     }
-    
-
-    pub fn sleep(&mut self, duration: usize) {
-        self.state = State::Sleeping;
-        self.sleep_until = duration;
-    }
 }
 
+extern "C" {
+    fn _make_syscall(
+        sysno: usize, // n da chamada
+        arg0: usize,
+        arg1: usize,
+        arg2: usize,
+        arg3: usize,
+        arg4: usize,
+        arg5: usize,
+    ) -> usize;
+}
 
-pub fn create_process(func: fn(), tmr: bool) -> usize {
-    let func_addr = func as usize;
-    let func_vaddr = func_addr; //- 0x6000_0000;
+pub unsafe fn make_syscall(pc: usize, frame_ptr: *mut crate::arch::isa::trap::TrapFrame) {
+    if frame_ptr.is_null() {
+        return;
+    }
 
-    let mut pid = 0;
-
-    let ret_proc = Process {
-        is_tmr: tmr,
-        frame: arch::mem::zalloc(1) as *mut arch::isa::trap::TrapFrame,
-        stack: arch::mem::alloc(consts::STACK_PAGES),
-        pid: unsafe { NEXT_PID },
-        root: arch::mem::zalloc(1) as *mut arch::isa::page::Table,
-        state: State::Running,
-        data: ProcessData::zero(),
-        program: null_mut(),
-        sleep_until: 0,
-    };
-
-    if(!ret_proc.is_tmr) {
-
-        unsafe {
-            NEXT_PID += 1;
+    let frame = frame_ptr.as_mut().unwrap();
+    let syscall_id = frame.syscall_id(); // processo
+ 
+    // skip ecall
+    frame.pc = pc + 4;
+    match syscall_id.try_into() {
+        Ok(Syscall::Nop) => {
+            crate::println!("NOP");
         }
+        Ok(Syscall::DumpRegisters) => {
+            crate::println!("Registers");
+            cpu::dump_registers(frame);
+        }
+        Ok(Syscall::Sleep) => {
+            crate::println!("Sleeping");
+            let proc = process::sleep_pid((*frame).pid, 1);
+            crate::println!("Process is {}", proc);
+        }
+        Ok(Syscall::Exit) => {
+            crate::println!("Exiting. Bye.");
+            crate::abort()
+        }
+        Ok(Syscall::PrintTotal) => {
+            crate::println!("Total: {}", process::total);
+        }
+        Ok(Syscall::Sum) => {
+           let x = 2;
+           let y = 2;
 
-        arch::frame::create_process(
-            unsafe { &mut *ret_proc.frame },
-            func_vaddr,
-            ret_proc.stack as usize,
-            do_nothing as usize,
-            ret_proc.pid as usize,
-        );
+           sum = x + y;
 
-        if let Some(mut pl) = unsafe { PROCESS_LIST.take() } {
-            let pid = ret_proc.pid;
-            pl.push_back(ret_proc);
-
-            unsafe {
-                PROCESS_LIST.replace(pl);
+           if (process::TMR_BOOL){
+            syscall_push_tmr(sum);
+           } else {
+            syscall_print_total(sum);
+           }    
+        }
+        Ok(Syscall::Print) => {
+            crate::println!("Tempo: {}", process::time_total);
+        }
+        Ok(Syscall::TmrAdd) => {
+            if let Some(mut tmr) = TMR_VALUES_LIST.take(){
+                crate::println!("Sum: {}", sum);
+                tmr.push_back(sum);
+                TMR_VALUES_LIST.replace(tmr);
+                if let Some(new_tmr) = TMR_VALUES_LIST.as_ref() {
+                    crate::println!("TMR_VALUES_LIST size: {} \n", new_tmr.len());
+                    if(new_tmr.len() >= 3){
+                        syscall_verify();
+                    }
+                }
             }
-
         }
-
-    } else {
-    
-    let mut processes: Option<VecDeque<Process>> = None;
-
-
-        unsafe {
-            TMR_BOOL = true;
-
-            processes = Some(VecDeque::with_capacity(3));
-        
-            let tmr_values_list = ret_proc.tmr();
-            for (p1, p2, p3) in tmr_values_list {
-                processes.as_mut().unwrap().push_back(p1);
-                processes.as_mut().unwrap().push_back(p2);
-                processes.as_mut().unwrap().push_back(p3);
-            }
+        Ok(Syscall::Verify) => {
+            if let Some(tmr) = TMR_VALUES_LIST.as_ref() {
+                let mut max_count = 0;
+                let mut most_common_value = 0;
             
-        }
-        
-        for process in processes.as_mut().unwrap() {
-            arch::frame::create_process(
-                unsafe { &mut *process.frame },
-                func_vaddr,
-                process.stack as usize,
-                do_nothing as usize,
-                process.pid as usize,
-            );
-
-            if let Some(mut pl) = unsafe { PROCESS_LIST.take() } {
-                pid = (*process).pid;
-                pl.push_back(process.clone());
-
-                unsafe {
-                    PROCESS_LIST.replace(pl);
+                for i in 0..tmr.len() {
+                    let mut count = 0;
+                    for j in i+1..tmr.len() {
+                        if tmr[i] == tmr[j] {
+                            count += 1;
+                        }
+                    }
+                    if count > max_count {
+                        max_count = count;
+                        most_common_value = tmr[i];
+                    }
                 }
-                
-            } else {
-                return 0;
-            }
-            unsafe {
-                NEXT_PID += 1;
-            }
-        
-        }
-        
-    }   
-    pid
-}
-
-
-pub fn sleep_pid(pid: usize, duration: usize) -> bool {
-    unsafe {
-        if let Some(mut pl) = PROCESS_LIST.take() {
-            for proc in pl.iter_mut() {
-                if proc.pid == pid {
-                    proc.sleep(duration);
-                    return true;
-                }
+            
+                crate::println!("Correct output: {}", most_common_value);
+                syscall_print();
             }
         }
-    }
-    false
-}
-
-impl Drop for Process {
-    fn drop(&mut self) {
-        arch::mem::dealloc(self.stack);
-
-        unsafe {
-            arch::mem::unmap(&mut *self.root);
-        }
-
-        arch::mem::dealloc(self.root as *mut u8);
+        Err(_) => panic!("Unknown syscall {}", syscall_id),
     }
 }
 
-pub fn init_tmr_values_list() {
-    unsafe {
-        TMR_VALUES_LIST = Some(VecDeque::with_capacity(3));
-    }
+pub fn syscall_nop() -> usize {
+    unsafe { _make_syscall(Syscall::Nop as usize, 0, 0, 0, 0, 0, 0) }
 }
 
-pub fn init() -> usize {
-    unsafe {
-        let start_time = mcycle::read();
-
-        PROCESS_LIST = Some(VecDeque::with_capacity(15));
-
-        init_tmr_values_list();
-
-        create_process(sum, true);
-
-        let pl = PROCESS_LIST.take().unwrap();
-        let p = pl.front().unwrap().frame;
-
-        PROCESS_LIST.replace(pl);
-
-        let end_time = mcycle::read();
-        let (execution_time, _) = end_time.overflowing_sub(start_time);
-
-        const CLOCK_FREQUENCY: f32 = 100_000_000.0; // 100 MHz
-        let execution_time_sec = (execution_time as f32) / CLOCK_FREQUENCY;
-
-        time_total = execution_time_sec;
-
-        (*p).pc
-    }
-
+pub fn syscall_dump() -> usize {
+    unsafe { _make_syscall(Syscall::DumpRegisters as usize, 0, 0, 0, 0, 0, 0) }
 }
 
-fn sum() {
-    syscall::syscall_sum();
+pub fn syscall_sleep() -> usize {
+    unsafe { _make_syscall(Syscall::Sleep as usize, 0, 0, 0, 0, 0, 0) }
 }
 
-
-fn init_process() {
-    syscall::syscall_dump();
-    syscall::syscall_exit();
+pub fn syscall_exit() -> usize {
+    unsafe { _make_syscall(Syscall::Exit as usize, 0, 0, 0, 0, 0, 0) }
 }
-  
+
+pub fn syscall_push_tmr(total: usize) -> usize {
+    unsafe { _make_syscall(Syscall::TmrAdd as usize, total, 0, 0, 0, 0, 0) }
+}
+pub fn syscall_print_total(total: usize) -> usize {
+    unsafe { _make_syscall(Syscall::PrintTotal as usize, total, 0, 0, 0, 0, 0) }
+}
+pub fn syscall_sum() -> usize {
+    unsafe { _make_syscall(Syscall::Sum as usize, 0, 0, 0, 0, 0, 0) }
+}
+pub fn syscall_print() -> usize {
+    unsafe { _make_syscall(Syscall::Print as usize, 0, 0, 0, 0, 0, 0) }
+}
+
+pub fn syscall_verify() -> usize {
+    unsafe { _make_syscall(Syscall::Verify as usize, 0, 0, 0, 0, 0, 0) }
+}
