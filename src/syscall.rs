@@ -3,6 +3,8 @@ use core::convert::{TryFrom, TryInto};
 use alloc::collections::vec_deque::VecDeque;
 use crate::process::{State, TMR_VALUES_LIST};
 
+pub static mut sum:usize = 0;
+
 #[repr(usize)]
 pub enum Syscall {
     Nop = 0,
@@ -54,7 +56,7 @@ pub unsafe fn make_syscall(pc: usize, frame_ptr: *mut crate::arch::isa::trap::Tr
 
     let frame = frame_ptr.as_mut().unwrap();
     let syscall_id = frame.syscall_id(); // processo
-
+ 
     // skip ecall
     frame.pc = pc + 4;
     match syscall_id.try_into() {
@@ -75,18 +77,20 @@ pub unsafe fn make_syscall(pc: usize, frame_ptr: *mut crate::arch::isa::trap::Tr
             crate::abort()
         }
         Ok(Syscall::PrintTotal) => {
-            crate::println!("Total: {}", process::total);
+            crate::println!("Total: {}", sum);
+            crate::println!("Tempo: {}", process::time_total);
         }
+        
         Ok(Syscall::Sum) => {
            let x = 2;
            let y = 2;
 
-           process::total = x + y;
+           sum = x + y;
 
            if (process::TMR_BOOL){
-            syscall_push_tmr(process::total);
+            syscall_push_tmr(sum);
            } else {
-            syscall_print_total(process::total);
+            syscall_print_total(sum);
            }    
         }
         Ok(Syscall::Print) => {
@@ -94,8 +98,8 @@ pub unsafe fn make_syscall(pc: usize, frame_ptr: *mut crate::arch::isa::trap::Tr
         }
         Ok(Syscall::TmrAdd) => {
             if let Some(mut tmr) = TMR_VALUES_LIST.take(){
-                crate::println!("Total value: {}", process::total);
-                tmr.push_back(process::total);
+                crate::println!("Sum: {}", sum);
+                tmr.push_back(sum);
                 TMR_VALUES_LIST.replace(tmr);
                 if let Some(new_tmr) = TMR_VALUES_LIST.as_ref() {
                     crate::println!("TMR_VALUES_LIST size: {} \n", new_tmr.len());
